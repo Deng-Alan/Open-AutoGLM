@@ -204,7 +204,7 @@ def check_model_api(base_url: str, model_name: str, api_key: str = "EMPTY") -> b
         print("✅ OK")
 
         # Check 2: Model exists
-        '''
+        """
         print(f"2. Checking model '{model_name}'...", end=" ")
         if model_name in available_models:
             print("✅ OK")
@@ -217,7 +217,7 @@ def check_model_api(base_url: str, model_name: str, api_key: str = "EMPTY") -> b
             if len(available_models) > 10:
                 print(f"     ... and {len(available_models) - 10} more")
             all_passed = False
-        '''
+        """
 
     except Exception as e:
         print("❌ FAILED")
