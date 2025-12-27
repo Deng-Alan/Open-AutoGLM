@@ -106,10 +106,11 @@ ADB 调试能力，可通过 WiFi 或网络连接设备，实现灵活的远程�
 
 ## iPhone 环境准备
 
-### 1. Python 环境
+如果你使用的是 iPhone 设备，请参考专门的 iOS 配置文档：
 
-建议使用 Python 3.10 及以上版本。
+📱 [iOS 环境配置指南](docs/ios_setup/ios_setup.md)
 
+<<<<<<< HEAD
 ### 2. 设置 WebDriverAgent
 
 WebDriverAgent 是 iOS 自动化的核心组件,需要在 iOS 设备上运行。
@@ -150,6 +151,9 @@ cd WebDriverAgent
 ![信任设备](resources/trust-dev-app.jpg)
 
 ![启用UI自动化](resources/enable-ui-automation.jpg)
+=======
+该文档详细介绍了如何配置 WebDriverAgent 和 iPhone 设备，以便在 iOS 上使用 AutoGLM。
+>>>>>>> 326cadd5d3e75751468294ee2dee85b5f77a07b2
 
 ## 部署准备工作
 
