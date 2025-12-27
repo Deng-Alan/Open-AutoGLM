@@ -1,0 +1,22 @@
+.app {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--color-bg-primary);
+    overflow: hidden;
+}
+
+.app-main {
+    flex: 1;
+    display: flex;
+    gap: 16px;
+    padding: 16px;
+    overflow: hidden;
+}
+
+/* 响应式布局 */
+@media (max-width: 900px) {
+    .app-main {
+        flex-direction: column;
+    }
+}
