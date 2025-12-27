@@ -6,9 +6,9 @@ Usage:
     python main.py [OPTIONS]
 
 Environment Variables:
-    PHONE_AGENT_BASE_URL: Model API base URL (default: http://localhost:8000/v1)
-    PHONE_AGENT_MODEL: Model name (default: autoglm-phone-9b)
-    PHONE_AGENT_API_KEY: API key for model authentication (default: EMPTY)
+    PHONE_AGENT_BASE_URL: Model API base URL (default: https://open.bigmodel.cn/api/paas/v4)
+    PHONE_AGENT_MODEL: Model name (default: autoglm-phone)
+    PHONE_AGENT_API_KEY: API key for model authentication (default: cddd65aada5d4af491f51b9cafce4d73.jJU25jPbY6QI3SO9)
     PHONE_AGENT_MAX_STEPS: Maximum steps per task (default: 100)
     PHONE_AGENT_DEVICE_ID: ADB device ID for multi-device setups
 """
@@ -405,21 +405,21 @@ Examples:
     parser.add_argument(
         "--base-url",
         type=str,
-        default=os.getenv("PHONE_AGENT_BASE_URL", "http://localhost:8000/v1"),
+        default=os.getenv("PHONE_AGENT_BASE_URL", "https://open.bigmodel.cn/api/paas/v4"),
         help="Model API base URL",
     )
 
     parser.add_argument(
         "--model",
         type=str,
-        default=os.getenv("PHONE_AGENT_MODEL", "autoglm-phone-9b"),
+        default=os.getenv("PHONE_AGENT_MODEL", "autoglm-phone"),
         help="Model name",
     )
 
     parser.add_argument(
         "--apikey",
         type=str,
-        default=os.getenv("PHONE_AGENT_API_KEY", "EMPTY"),
+        default=os.getenv("PHONE_AGENT_API_KEY", "cddd65aada5d4af491f51b9cafce4d73.jJU25jPbY6QI3SO9"),
         help="API key for model authentication",
     )
 
