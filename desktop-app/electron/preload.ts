@@ -15,6 +15,10 @@ const electronAPI = {
     getConfig: () => ipcRenderer.invoke('get-config'),
     saveConfig: (config: Record<string, any>) => ipcRenderer.invoke('save-config', config),
 
+    // 应用数据管理（记忆、规则）
+    getAppData: () => ipcRenderer.invoke('get-app-data'),
+    saveAppData: (data: Record<string, any>) => ipcRenderer.invoke('save-app-data', data),
+
     // 事件监听
     onTaskOutput: (callback: (data: { type: string; message: string }) => void) => {
         ipcRenderer.on('task-output', (_, data) => callback(data))

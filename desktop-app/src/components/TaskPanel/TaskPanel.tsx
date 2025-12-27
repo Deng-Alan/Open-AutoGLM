@@ -1,21 +1,30 @@
 import { useState, useEffect, useRef } from 'react'
 import { useAppStore } from '../../stores/appStore'
+import type { Task } from '../../stores/appStore'
 import './TaskPanel.css'
 
 function TaskPanel() {
     const {
         isRunning,
         currentTask,
+        taskQueue,
         logs,
         selectedDeviceId,
         config,
         setIsRunning,
-        setCurrentTask,
+        addTaskToQueue,
+        removeTaskFromQueue,
+        reorderTaskQueue,
+        startNextTask,
+        completeCurrentTask,
+        clearTaskQueue,
         addLog,
-        clearLogs
+        clearLogs,
+        addMemory
     } = useAppStore()
 
     const [taskInput, setTaskInput] = useState('')
+    const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
     const logsEndRef = useRef<HTMLDivElement>(null)
 
     // 自动滚动到底部
@@ -34,6 +43,8 @@ function TaskPanel() {
                 addLog('thinking', message)
             } else if (message.includes('🎯') || message.includes('动作')) {
                 addLog('action', message)
+                // 自动提取记忆
+                extractMemory(message)
             } else if (message.includes('✅') || message.includes('成功')) {
                 addLog('success', message)
             } else if (message.includes('❌') || message.includes('失败') || data.type === 'stderr') {
@@ -44,12 +55,21 @@ function TaskPanel() {
         }
 
         const handleComplete = (data: { code: number }) => {
-            setIsRunning(false)
             if (data.code === 0) {
                 addLog('success', '✅ 任务执行完成')
+                completeCurrentTask('completed')
             } else {
                 addLog('error', `❌ 任务执行失败 (退出码: ${data.code})`)
+                completeCurrentTask('failed')
             }
+
+            // 自动执行下一个任务
+            setTimeout(() => {
+                const nextTask = startNextTask()
+                if (nextTask) {
+                    executeTask(nextTask.content)
+                }
+            }, 1000)
         }
 
         window.electronAPI.onTaskOutput(handleOutput)
@@ -59,12 +79,35 @@ function TaskPanel() {
             window.electronAPI.removeAllListeners('task-output')
             window.electronAPI.removeAllListeners('task-complete')
         }
-    }, [addLog, setIsRunning])
+    }, [addLog, completeCurrentTask, startNextTask])
+
+    // 自动提取记忆
+    const extractMemory = (message: string) => {
+        // 简单的记忆提取逻辑
+        if (message.includes('搜索') && message.includes('"')) {
+            const match = message.match(/"([^"]+)"/)
+            if (match) {
+                addMemory({
+                    content: `搜索了"${match[1]}"`,
+                    source: 'auto',
+                    category: 'history'
+                })
+            }
+        }
+        if (message.includes('Launch') || message.includes('启动')) {
+            const appMatch = message.match(/(?:Launch|启动)\s*[：:]\s*(\S+)/)
+            if (appMatch) {
+                addMemory({
+                    content: `使用了${appMatch[1]}应用`,
+                    source: 'auto',
+                    category: 'history'
+                })
+            }
+        }
+    }
 
     // 执行任务
-    const runTask = async () => {
-        if (!taskInput.trim() || isRunning) return
-
+    const executeTask = async (task: string) => {
         if (!config.apiKey) {
             addLog('error', '❌ 请先在设置中配置 API Key')
             return
@@ -76,16 +119,35 @@ function TaskPanel() {
         }
 
         clearLogs()
-        setCurrentTask(taskInput)
         setIsRunning(true)
-        addLog('info', `🚀 开始执行任务: ${taskInput}`)
+        addLog('info', `🚀 开始执行任务: ${task}`)
 
         try {
-            await window.electronAPI.runTask(taskInput)
+            await window.electronAPI.runTask(task)
         } catch (error) {
             addLog('error', `❌ 执行出错: ${error}`)
             setIsRunning(false)
+            completeCurrentTask('failed')
         }
+    }
+
+    // 添加任务到队列或立即执行
+    const handleAddTask = () => {
+        if (!taskInput.trim()) return
+
+        if (isRunning) {
+            // 当前有任务在执行，加入队列
+            addTaskToQueue(taskInput)
+            addLog('info', `📋 已添加到队列: ${taskInput}`)
+        } else {
+            // 没有任务执行，直接开始
+            addTaskToQueue(taskInput)
+            const task = startNextTask()
+            if (task) {
+                executeTask(task.content)
+            }
+        }
+        setTaskInput('')
     }
 
     // 停止任务
@@ -93,6 +155,7 @@ function TaskPanel() {
         try {
             await window.electronAPI.stopTask()
             addLog('info', '⏹️ 任务已停止')
+            completeCurrentTask('stopped')
             setIsRunning(false)
         } catch (error) {
             console.error('停止任务失败:', error)
@@ -103,8 +166,25 @@ function TaskPanel() {
     const handleKeyPress = (e: React.KeyboardEvent) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault()
-            runTask()
+            handleAddTask()
         }
+    }
+
+    // 拖拽处理
+    const handleDragStart = (index: number) => {
+        setDraggedIndex(index)
+    }
+
+    const handleDragOver = (e: React.DragEvent, index: number) => {
+        e.preventDefault()
+        if (draggedIndex !== null && draggedIndex !== index) {
+            reorderTaskQueue(draggedIndex, index)
+            setDraggedIndex(index)
+        }
+    }
+
+    const handleDragEnd = () => {
+        setDraggedIndex(null)
     }
 
     // 获取日志图标
@@ -137,21 +217,22 @@ function TaskPanel() {
             <div className="task-input-section">
                 <textarea
                     className="task-input"
-                    placeholder="请输入要执行的任务，例如：打开微信给文件传输助手发送你好"
+                    placeholder={isRunning
+                        ? "当前有任务执行中，输入新任务将加入队列..."
+                        : "请输入要执行的任务，例如：打开微信给文件传输助手发送你好"}
                     value={taskInput}
                     onChange={(e) => setTaskInput(e.target.value)}
                     onKeyPress={handleKeyPress}
-                    disabled={isRunning}
                     rows={3}
                 />
                 <div className="task-actions">
                     <button
                         className="action-btn primary"
-                        onClick={runTask}
-                        disabled={isRunning || !taskInput.trim()}
+                        onClick={handleAddTask}
+                        disabled={!taskInput.trim()}
                     >
-                        <span className="btn-icon">▶️</span>
-                        <span className="btn-text">执行任务</span>
+                        <span className="btn-icon">{isRunning ? '➕' : '▶️'}</span>
+                        <span className="btn-text">{isRunning ? '加入队列' : '执行任务'}</span>
                     </button>
                     <button
                         className="action-btn danger"
@@ -163,14 +244,56 @@ function TaskPanel() {
                     </button>
                     <button
                         className="action-btn secondary"
-                        onClick={clearLogs}
+                        onClick={() => { clearLogs(); clearTaskQueue(); }}
                         disabled={isRunning}
                     >
                         <span className="btn-icon">🗑️</span>
-                        <span className="btn-text">清空日志</span>
+                        <span className="btn-text">清空</span>
                     </button>
                 </div>
             </div>
+
+            {/* 任务队列 */}
+            {(currentTask || taskQueue.length > 0) && (
+                <div className="task-queue-section">
+                    <div className="queue-header">
+                        <span className="queue-title">📋 任务队列</span>
+                        <span className="queue-count">{taskQueue.length} 个等待中</span>
+                    </div>
+                    <div className="queue-list">
+                        {/* 当前执行的任务 */}
+                        {currentTask && (
+                            <div className="queue-item current">
+                                <span className="item-status">🔄</span>
+                                <span className="item-content">{currentTask.content}</span>
+                                <span className="item-label">执行中</span>
+                            </div>
+                        )}
+                        {/* 等待中的任务 */}
+                        {taskQueue.map((task, index) => (
+                            <div
+                                key={task.id}
+                                className={`queue-item pending ${draggedIndex === index ? 'dragging' : ''}`}
+                                draggable
+                                onDragStart={() => handleDragStart(index)}
+                                onDragOver={(e) => handleDragOver(e, index)}
+                                onDragEnd={handleDragEnd}
+                            >
+                                <span className="item-handle">⋮⋮</span>
+                                <span className="item-status">⏳</span>
+                                <span className="item-content">{task.content}</span>
+                                <button
+                                    className="item-remove"
+                                    onClick={() => removeTaskFromQueue(task.id)}
+                                    title="移除任务"
+                                >
+                                    ×
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             {/* 快捷任务 */}
             <div className="quick-tasks">
@@ -179,28 +302,24 @@ function TaskPanel() {
                     <button
                         className="quick-btn"
                         onClick={() => setTaskInput('打开微信')}
-                        disabled={isRunning}
                     >
                         微信
                     </button>
                     <button
                         className="quick-btn"
                         onClick={() => setTaskInput('打开淘宝搜索手机')}
-                        disabled={isRunning}
                     >
                         淘宝搜索
                     </button>
                     <button
                         className="quick-btn"
                         onClick={() => setTaskInput('打开抖音')}
-                        disabled={isRunning}
                     >
                         抖音
                     </button>
                     <button
                         className="quick-btn"
                         onClick={() => setTaskInput('返回桌面')}
-                        disabled={isRunning}
                     >
                         返回桌面
                     </button>

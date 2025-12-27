@@ -14,6 +14,10 @@ const getConfigPath = () => {
   const userDataPath = electron.app.getPath("userData");
   return path.join(userDataPath, "config.json");
 };
+const getAppDataPath = () => {
+  const userDataPath = electron.app.getPath("userData");
+  return path.join(userDataPath, "app-data.json");
+};
 const loadConfig = () => {
   try {
     const configPath = getConfigPath();
@@ -37,6 +41,29 @@ const saveConfig = (config) => {
     fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
   } catch (error) {
     console.error("保存配置失败:", error);
+  }
+};
+const loadAppData = () => {
+  try {
+    const dataPath = getAppDataPath();
+    if (fs.existsSync(dataPath)) {
+      return JSON.parse(fs.readFileSync(dataPath, "utf-8"));
+    }
+  } catch (error) {
+    console.error("加载应用数据失败:", error);
+  }
+  return {
+    memories: [],
+    bannedOperations: [],
+    executionRules: []
+  };
+};
+const saveAppData = (data) => {
+  try {
+    const dataPath = getAppDataPath();
+    fs.writeFileSync(dataPath, JSON.stringify(data, null, 2));
+  } catch (error) {
+    console.error("保存应用数据失败:", error);
   }
 };
 function createWindow() {
@@ -181,6 +208,13 @@ electron.ipcMain.handle("check-adb", async () => {
       resolve(false);
     });
   });
+});
+electron.ipcMain.handle("get-app-data", async () => {
+  return loadAppData();
+});
+electron.ipcMain.handle("save-app-data", async (_, data) => {
+  saveAppData(data);
+  return true;
 });
 electron.app.whenReady().then(() => {
   createWindow();

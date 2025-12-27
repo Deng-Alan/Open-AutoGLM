@@ -11,6 +11,9 @@ const electronAPI = {
   // 配置管理
   getConfig: () => electron.ipcRenderer.invoke("get-config"),
   saveConfig: (config) => electron.ipcRenderer.invoke("save-config", config),
+  // 应用数据管理（记忆、规则）
+  getAppData: () => electron.ipcRenderer.invoke("get-app-data"),
+  saveAppData: (data) => electron.ipcRenderer.invoke("save-app-data", data),
   // 事件监听
   onTaskOutput: (callback) => {
     electron.ipcRenderer.on("task-output", (_, data) => callback(data));

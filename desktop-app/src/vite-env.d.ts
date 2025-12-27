@@ -19,6 +19,36 @@ interface TaskOutput {
     message: string
 }
 
+interface AppData {
+    memories: MemoryEntry[]
+    bannedOperations: BannedOperation[]
+    executionRules: ExecutionRule[]
+}
+
+interface MemoryEntry {
+    id: string
+    content: string
+    source: 'auto' | 'manual'
+    createdAt: string
+    category: 'location' | 'contact' | 'preference' | 'history' | 'other'
+}
+
+interface BannedOperation {
+    id: string
+    type: 'app' | 'action' | 'keyword'
+    value: string
+    description: string
+    enabled: boolean
+}
+
+interface ExecutionRule {
+    id: string
+    name: string
+    condition: string
+    action: 'pause' | 'stop' | 'notify' | 'skip'
+    enabled: boolean
+}
+
 interface ElectronAPI {
     // 设备管理
     getDevices: () => Promise<Device[]>
@@ -32,6 +62,10 @@ interface ElectronAPI {
     // 配置管理
     getConfig: () => Promise<Config>
     saveConfig: (config: Config) => Promise<boolean>
+
+    // 应用数据管理
+    getAppData: () => Promise<AppData>
+    saveAppData: (data: AppData) => Promise<boolean>
 
     // 事件监听
     onTaskOutput: (callback: (data: TaskOutput) => void) => void

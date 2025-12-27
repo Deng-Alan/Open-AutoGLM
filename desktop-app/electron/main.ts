@@ -22,6 +22,12 @@ const getConfigPath = () => {
     return path.join(userDataPath, 'config.json')
 }
 
+// 应用数据路径（记忆、规则等）
+const getAppDataPath = () => {
+    const userDataPath = app.getPath('userData')
+    return path.join(userDataPath, 'app-data.json')
+}
+
 // 加载配置
 const loadConfig = (): Record<string, any> => {
     try {
@@ -48,6 +54,33 @@ const saveConfig = (config: Record<string, any>) => {
         fs.writeFileSync(configPath, JSON.stringify(config, null, 2))
     } catch (error) {
         console.error('保存配置失败:', error)
+    }
+}
+
+// 加载应用数据（记忆、规则）
+const loadAppData = (): Record<string, any> => {
+    try {
+        const dataPath = getAppDataPath()
+        if (fs.existsSync(dataPath)) {
+            return JSON.parse(fs.readFileSync(dataPath, 'utf-8'))
+        }
+    } catch (error) {
+        console.error('加载应用数据失败:', error)
+    }
+    return {
+        memories: [],
+        bannedOperations: [],
+        executionRules: []
+    }
+}
+
+// 保存应用数据
+const saveAppData = (data: Record<string, any>) => {
+    try {
+        const dataPath = getAppDataPath()
+        fs.writeFileSync(dataPath, JSON.stringify(data, null, 2))
+    } catch (error) {
+        console.error('保存应用数据失败:', error)
     }
 }
 
@@ -224,6 +257,17 @@ ipcMain.handle('check-adb', async () => {
             resolve(false)
         })
     })
+})
+
+// 获取应用数据（记忆、规则）
+ipcMain.handle('get-app-data', async () => {
+    return loadAppData()
+})
+
+// 保存应用数据
+ipcMain.handle('save-app-data', async (_, data: Record<string, any>) => {
+    saveAppData(data)
+    return true
 })
 
 // 应用生命周期
